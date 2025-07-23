@@ -10,7 +10,9 @@ from app.config import PINECONE_API_KEY, OPENAI_API_KEY, DATA_DIR
 from uuid import uuid4
 import hashlib
 import unicodedata
-import pdfplumber
+from PIL import Image
+import pytesseract
+import fitz
 
 def generate_stable_id(text: str) -> str:
     return hashlib.md5(text.encode('utf-8')).hexdigest()
@@ -151,41 +153,31 @@ Answer:"""
             print(f"Error: {e}")
 
     def insert_docs_to_pinecone(self, filepath):
-        loader = UnstructuredPDFLoader(filepath)
-        documents = loader.load()
-        print("Loaded documents:", documents)
+        doc = fitz.open(filepath)
+        all_text = ""
+        for i in range(len(doc)):
+            pix = doc[i].get_pixmap(dpi=300)
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            page_text = pytesseract.image_to_string(img, lang='ben')
+            cleaned = clean_bangla_text(page_text)
+            all_text += cleaned + "\n"
+
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=500,
             chunk_overlap=100,
             separators=["\n", "।", ".", " "]
         )
-        docs_chunks = text_splitter.split_documents(documents)
 
-        # Actually insert into Pinecone
-        self.vectorstore.add_documents(docs_chunks)
-        
-        print(f"Inserted {len(docs_chunks)} chunks into Pinecone index '{self.index_name}'.")
-from PIL import Image
-import pytesseract
-import fitz
+        documents = text_splitter.create_documents([all_text])
+        self.vectorstore.add_documents(documents)
+        print(f"Inserted {len(documents)} chunks into Pinecone index '{self.index_name}'.")
 
-# Usage example
+# Usage
 if __name__ == "__main__":
-    # bot = Chatbot(
-    #     pinecone_api_key=PINECONE_API_KEY,
-    #     openai_api_key=OPENAI_API_KEY,
-    # )
-    # insert context info into pinecone
+    bot = Chatbot(
+        pinecone_api_key=PINECONE_API_KEY,
+        openai_api_key=OPENAI_API_KEY,
+    )
     data_path = os.path.join(DATA_DIR, "HSC26-Bangla1st-Paper.pdf")
-    # bot.insert_docs_to_pinecone(data_path)
-
-    doc = fitz.open(data_path)
-
-    for i in range(len(doc)):
-        pix = doc[i].get_pixmap(dpi=300)  # better quality
-        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-        text = pytesseract.image_to_string(img, lang='ben')
-        print(text)
-    
-
-    # bot.chat_loop()
+    bot.insert_docs_to_pinecone(data_path)
+    bot.chat_loop()
