@@ -11,11 +11,6 @@ langchain-community
 langchain-text-splitters 
 langchain-core 
 pinecone-client
-sentence-transformers
-unstructured[all-docs]
-
-PyMuPDF
-pdfplumber 
-opencv-python 
 pytesseract 
+PyMuPDF
 pillow

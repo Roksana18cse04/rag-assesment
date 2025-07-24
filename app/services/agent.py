@@ -1,8 +1,9 @@
 import os
-from langchain.document_loaders import UnstructuredPDFLoader,  PyMuPDFLoader
+# from langchain.document_loaders import UnstructuredPDFLoader,  PyMuPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import ChatOpenAI
-from langchain_community.embeddings import HuggingFaceEmbeddings
+# from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.prompts import PromptTemplate
 from pinecone import Pinecone, ServerlessSpec
@@ -40,7 +41,7 @@ class Chatbot:
         pinecone_api_key: str,
         openai_api_key: str,
         index_name: str = "chatbot-index",
-        embedding_model: str = "intfloat/multilingual-e5-base",
+        # embedding_model: str = "intfloat/multilingual-e5-base",
         llm_model: str = "gpt-4",
         pinecone_region: str = "us-east-1",
         pinecone_cloud: str = "aws",
@@ -58,14 +59,17 @@ class Chatbot:
         if index_name not in [i.name for i in self.pc.list_indexes()]:
             self.pc.create_index(
                 name=index_name,
-                dimension=768,
+                dimension=3072,  # Dimension for OpenAI embeddings
                 metric="cosine",
                 spec=ServerlessSpec(cloud=pinecone_cloud, region=pinecone_region),
             )
 
         # Initialize embeddings and vectorstore
 
-        self.embeddings = HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-base")
+        # self.embeddings = HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-base")
+        self.embeddings = OpenAIEmbeddings(
+            model="text-embedding-3-large",  # Use OpenAI's text-embedding-3-large model
+        )
         self.vectorstore = PineconeVectorStore(
             index_name=index_name,
             embedding=self.embeddings,
@@ -79,13 +83,16 @@ class Chatbot:
         # Prompt template
 
         template = """
-You are a helpful assistant for a RAG system.
-You will receive user queries in Bangla or English.
-Use only the retrieved context to answer the question.
-If the answer is not found in the context, respond with:
-"দুঃখিত, এই প্রশ্নের উত্তর পাওয়া যায়নি।" or "Sorry, I couldn't find the answer to your question."
+You are a helpful and intelligent assistant for a Retrieval-Augmented Generation (RAG) system.
 
-Always answer in the language of the question.
+You will receive user questions in either Bangla or English.
+Use **only** the retrieved context provided below to answer the question accurately.
+If the answer is not explicitly available, try to infer it **reasonably** from the context.
+If no answer can be found or inferred, respond with:
+- "দুঃখিত, এই প্রশ্নের উত্তর পাওয়া যায়নি।" (for Bangla questions), or
+- "Sorry, I couldn't find the answer to your question." (for English questions).
+
+Always respond **in the same language** as the user's question.
 
 Context: {context}
 
@@ -179,5 +186,5 @@ if __name__ == "__main__":
         openai_api_key=OPENAI_API_KEY,
     )
     data_path = os.path.join(DATA_DIR, "HSC26-Bangla1st-Paper.pdf")
-    bot.insert_docs_to_pinecone(data_path)
+    # bot.insert_docs_to_pinecone(data_path)
     bot.chat_loop()
