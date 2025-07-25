@@ -102,9 +102,15 @@ Chat History:
 
 Question: {question}
 
-Instructions: Look carefully through the context for any mention of the terms in the question. Even if the text formatting seems broken, try to identify the relevant information.
+Instructions:
+- If the question can be answered by **a single name, phrase, number, or entity**, return the **shortest possible answer** — ideally in **1–3 words**, no extra sentence.
+- If the question **requires explanation or description**, then return a **clear full sentence**.
+- Never include unnecessary repetition of question terms in the answer.
+- Focus on precision and brevity.
+- Always respond **in the same language** as the user's question.
 
-Answer:"""
+Answer:
+"""
 
         self.prompt = PromptTemplate.from_template(template)
 
@@ -181,6 +187,5 @@ if __name__ == "__main__":
         openai_api_key=OPENAI_API_KEY,
     )
     data_path = os.path.join(DATA_DIR, "HSC26-Bangla1st-Paper.pdf")
-    # bot.insert_docs_to_pinecone(data_path)
     # bot.insert_docs_to_pinecone(data_path)
     bot.chat_loop()

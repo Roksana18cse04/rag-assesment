@@ -5,6 +5,7 @@ from app.services.agent import Chatbot
 from app.config import PINECONE_API_KEY, OPENAI_API_KEY
 import uuid
 import base64
+from typing import List
 
 router = APIRouter()
 
@@ -65,3 +66,64 @@ def get_history(session_id: str):
         "session_id": session_id,
         "history": history  # already a list of {"question": ..., "answer": ...}
     }
+
+# Request model for evaluation
+class EvalItem(BaseModel):
+    question: str
+    expected_answer: str
+
+class EvalRequest(BaseModel):
+    data: List[EvalItem]
+
+# Route: POST /evaluate
+@router.post("/evaluate")
+def evaluate_rag(eval_request: EvalRequest):
+    eval_data = [item.dict() for item in eval_request.data]
+
+    results = []
+    total_relevance = 0.0
+    total_groundedness = 0.0
+
+    def cosine_similarity(a, b):
+        import numpy as np
+        a, b = np.array(a), np.array(b)
+        return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+
+    for item in eval_data:
+        question = item["question"]
+        expected = item["expected_answer"]
+
+        docs = bot.retriever.invoke(question)
+        doc_texts = [doc.page_content for doc in docs]
+
+        answer, _ = bot.get_answer(question, [])
+
+        # Step 3: Get embeddings
+        expected_emb = bot.embeddings.embed_query(expected)
+        answer_emb = bot.embeddings.embed_query(answer)
+        doc_embs = [bot.embeddings.embed_query(text) for text in doc_texts]
+
+        # Step 4: Calculate scores
+        relevance = cosine_similarity(expected_emb, answer_emb)
+        groundedness = max(cosine_similarity(answer_emb, emb) for emb in doc_embs)
+
+        total_relevance += relevance
+        total_groundedness += groundedness
+
+        results.append({
+            "question": question,
+            "expected_answer": expected,
+            "generated_answer": answer,
+            "relevance_score": relevance,
+            "groundedness_score": groundedness
+        })
+
+    avg_relevance = total_relevance / len(eval_data)
+    avg_groundedness = total_groundedness / len(eval_data)
+
+    return {
+        "average_relevance": avg_relevance,
+        "average_groundedness": avg_groundedness,
+        "results": results
+    }
+
