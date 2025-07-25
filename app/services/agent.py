@@ -45,7 +45,7 @@ class Chatbot:
         llm_model: str = "gpt-4",
         pinecone_region: str = "us-east-1",
         pinecone_cloud: str = "aws",
-        retriever_k: int = 3,
+        retriever_k: int = 5,
         temperature: float = 0,
     ):
         # Set environment variable for OpenAI
@@ -94,18 +94,19 @@ If no answer can be found or inferred, respond with:
 
 Always respond **in the same language** as the user's question.
 
-Context: {context}
+Context to search through:
+{context}
 
 Chat History:
 {chat_history}
 
 Question: {question}
 
-Answer:"""
-        self.prompt = PromptTemplate.from_template(template)
+Instructions: Look carefully through the context for any mention of the terms in the question. Even if the text formatting seems broken, try to identify the relevant information.
 
-        # Chat history list of (question, answer) tuples
-        self.chat_history = []
+Answer:"""
+
+        self.prompt = PromptTemplate.from_template(template)
 
     def format_docs(self, docs):
         cleaned_texts = []
@@ -115,12 +116,7 @@ Answer:"""
 
         return "\n\n".join(cleaned_texts)
 
-    def format_chat(self):
-        if not self.chat_history:
-            return ""
-        return "\n".join(f"Human: {q}\nAssistant: {a}" for q, a in self.chat_history)
-
-    def get_answer(self, question: str) -> str:
+    def get_answer(self, question: str, chat_history) -> str:
         # Retrieve relevant docs
         docs = self.retriever.invoke(question)
         print("retrival docs---------", docs)
@@ -130,17 +126,16 @@ Answer:"""
         # Format full prompt
         full_prompt = self.prompt.format(
             context=context,
-            chat_history=self.format_chat(),
+            chat_history=chat_history,
             question=question,
         )
 
         # Get answer from LLM
         response = self.llm.invoke(full_prompt)
         answer = response.content.strip()
+        updated_history = chat_history + [{"question": question, "answer": answer}]
 
-        # Update chat history
-        self.chat_history.append((question, answer))
-        return answer
+        return answer, updated_history
 
     def chat_loop(self):
         print("Chatbot is ready! Press Ctrl+C to stop.")
@@ -170,8 +165,8 @@ Answer:"""
             all_text += cleaned + "\n"
 
         text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500,
-            chunk_overlap=100,
+            chunk_size=1024,
+            chunk_overlap=50,
             separators=["\n", "।", ".", " "]
         )
 
@@ -186,5 +181,6 @@ if __name__ == "__main__":
         openai_api_key=OPENAI_API_KEY,
     )
     data_path = os.path.join(DATA_DIR, "HSC26-Bangla1st-Paper.pdf")
+    # bot.insert_docs_to_pinecone(data_path)
     # bot.insert_docs_to_pinecone(data_path)
     bot.chat_loop()
