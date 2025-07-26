@@ -40,7 +40,7 @@ class QuestionRequest(BaseModel):
     question: str
 
 # Ask a question (with session_id)
-@router.post("/ask")
+@router.post("/ask-question")
 def ask_question(req: QuestionRequest):
     history = session_histories.get(req.session_id)
     if history is None:

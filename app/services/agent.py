@@ -40,7 +40,7 @@ class Chatbot:
         self,
         pinecone_api_key: str,
         openai_api_key: str,
-        index_name: str = "chatbot-index",
+        index_name: str = "rag-pdf",
         # embedding_model: str = "intfloat/multilingual-e5-base",
         llm_model: str = "gpt-4",
         pinecone_region: str = "us-east-1",
