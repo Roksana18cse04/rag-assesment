@@ -9,8 +9,8 @@ A document-based chatbot that extracts answers from scanned Bangla PDFs using OC
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/marziasu/chatbot-rag-.git
-cd chatbot-rag-
+git clone https://github.com/Roksana18cse04/rag-assesment.git
+cd rag-assesment
 ````
 
 ### 2. Create a Virtual Environment
@@ -59,8 +59,8 @@ uvicorn app.main:app
 
 ## 🌐 Deployment
 
-* 🌍 Live: [https://chatbot-rag-mthf.onrender.com](https://chatbot-rag-mthf.onrender.com)
-* 📘 Swagger Docs: [https://chatbot-rag-mthf.onrender.com/docs](https://chatbot-rag-mthf.onrender.com/docs)
+* 🌍 Live: [https://rag-assesment.onrender.com](https://rag-assesment.onrender.com)
+* 📘 Swagger Docs: [https://rag-assesment.onrender.com/docs](https://rag-assesment.onrender.com/docs)
 
 ---
 
@@ -242,7 +242,3 @@ OpenAIEmbeddings(model="text-embedding-3-large")
 **Roksana Akter**
 AI Engineer | Data Scientist | OCR & RAG Specialist
 
-```
-
-Let me know if you want this as `.pdf`, `.docx`, or converted into a landing page!
-```
